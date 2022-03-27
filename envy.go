@@ -25,16 +25,18 @@ var (
 	ErrInvalidBoolFlagValue = errors.New("bool flag got value that was't 'true' or 'false'")
 )
 
-// Parse will call the ParseFlagSet on the default pflag.CommandLine. This is
-// likely the function you want to use, but for more details on usage see
-// ParseFlagSet.
+// ParseFlagSet will loop through defined flags in the default pflag.CommandLine
+// and automatically add an environment variable parser for the flag name. This
+// Parse func must be called before the call to pflag.Parse() and after you've
+// defined all your flags.
 func Parse(pfx string) {
 	ParseFlagSet(pfx, pflag.CommandLine)
 }
 
-// ParseFlagSet will loop through defined flags and automatically add an environment
-// variable parser for the flag name. This Parse func must be called before the
-// call to pflag.Parse() and after you've defined all your flags.
+// ParseFlagSet will loop through defined flags in the given pflag.FlagSet and
+// automatically add an environment variable parser for the flag name. This
+// ParseFlagSet func must be called before the call to pflag.Parse() and after
+// you've defined all your flags.
 func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
 
 	// Transform the pfx to uppercase and remove trailing _s, this allows many
@@ -83,10 +85,14 @@ func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
 	})
 }
 
+// Disable removes the given flag from using any environment variables. It must
+// be called before the call to envy.Parse().
 func Disable(name string) {
 	DisableOnFlagSet(name, pflag.CommandLine)
 }
 
+// DisableOnFlagSet removes the given flag from using any environment variables.
+// It must be called before the call to envy.Parse().
 func DisableOnFlagSet(name string, fs *pflag.FlagSet) {
 	f := fs.Lookup(name)
 	if f == nil {
@@ -98,10 +104,14 @@ func DisableOnFlagSet(name string, fs *pflag.FlagSet) {
 	f.Annotations[envyDisable] = []string{"true"}
 }
 
+// SetEnvName allows setting a custom environment variable for a given flag. It
+// must be called before the call to envy.Parse().
 func SetEnvName(name, envName string) {
 	SetEnvNameOnFlagSet(name, envName, pflag.CommandLine)
 }
 
+// SetEnvNameOnFlagSet allows setting a custom environment variable for a given
+// flag. It must be called before the call to envy.Parse().
 func SetEnvNameOnFlagSet(name, envName string, fs *pflag.FlagSet) {
 	f := fs.Lookup(name)
 	if f == nil {
