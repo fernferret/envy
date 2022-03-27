@@ -22,7 +22,7 @@ of them very heavy/confusing. All I wanted was:
 Enter: envy. The basic idea and name came from
 https://github.com/jamiealquiza/envy, however this version requires using cobra
 which I find a bit overkill for some of my small apps. It also didn't support
-the second 2 bullets above.
+some of the extended features like `Disable` and `SetEnvName`.
 
 The order of parsing is kept a bit simpler than items like viper using:
 
