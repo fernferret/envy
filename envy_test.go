@@ -1,9 +1,11 @@
-package envy
+package envy_test
 
 import (
 	"os"
 	"testing"
+	"time"
 
+	"github.com/fernferret/envy"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
@@ -179,17 +181,17 @@ func TestParseFlagSet(t *testing.T) {
 			}
 
 			if tt.args.disabled {
-				Disable(tt.args.name)
+				envy.Disable(tt.args.name)
 			}
 
 			if tt.args.custom != "" {
-				SetEnvName(tt.args.name, tt.args.custom)
+				envy.SetEnvName(tt.args.name, tt.args.custom)
 			}
 
 			if tt.args.panic {
-				assert.Panics(t, func() { Parse(tt.args.pfx) })
+				assert.Panics(t, func() { envy.Parse(tt.args.pfx) })
 			} else {
-				assert.NotPanics(t, func() { Parse(tt.args.pfx) })
+				assert.NotPanics(t, func() { envy.Parse(tt.args.pfx) })
 
 				flag := pflag.Lookup(tt.args.name)
 
@@ -205,7 +207,7 @@ func TestDisableNonexistantFlag(t *testing.T) {
 
 	pflag.Bool("verbose", false, "test flag")
 
-	assert.Panics(t, func() { Disable("foo") })
+	assert.Panics(t, func() { envy.Disable("foo") })
 }
 
 func TestSetNonexistantFlag(t *testing.T) {
@@ -213,7 +215,7 @@ func TestSetNonexistantFlag(t *testing.T) {
 
 	pflag.Bool("verbose", false, "test flag")
 
-	assert.Panics(t, func() { SetEnvName("foo", "bar") })
+	assert.Panics(t, func() { envy.SetEnvName("foo", "bar") })
 }
 
 func TestDuplicateSet(t *testing.T) {
@@ -221,8 +223,85 @@ func TestDuplicateSet(t *testing.T) {
 
 	pflag.String("kube-config", "", "test flag")
 
-	assert.NotPanics(t, func() { SetEnvName("kube-config", "KUBECONFIG") })
+	assert.NotPanics(t, func() { envy.SetEnvName("kube-config", "KUBECONFIG") })
 
 	// even if it's the same value, panic
-	assert.Panics(t, func() { SetEnvName("kube-config", "KUBECONFIG") })
+	assert.Panics(t, func() { envy.SetEnvName("kube-config", "KUBECONFIG") })
+}
+
+func ExampleParse() {
+	// Reset CommandLine flags for example, don't include these in your code!
+	pflag.CommandLine = pflag.NewFlagSet("test", pflag.PanicOnError)
+	os.Clearenv()
+
+	// Define a few flags
+	pflag.String("url", "http://localhost:8080", "set the url")
+	pflag.Bool("once", false, "only run processing once")
+	pflag.DurationP("interval", "i", time.Minute, "interval to check widgets")
+
+	// Simulate COOL_APP_INTERVAL being set
+	os.Setenv("COOL_APP_INTERVAL", "10m")
+
+	// Pre-parse with envy with a prefix of COOL_APP_
+	envy.Parse("COOL_APP")
+
+	// Don't sort the flags.
+	pflag.CommandLine.SortFlags = false
+
+	// Parse the flags
+	pflag.Parse()
+
+	// Output results to stdout instead of the default stderr
+	pflag.CommandLine.SetOutput(os.Stdout)
+	pflag.PrintDefaults()
+	// Output: --url string          set the url [COOL_APP_URL] (default "http://localhost:8080")
+	//       --once                only run processing once [COOL_APP_ONCE]
+	//   -i, --interval duration   interval to check widgets [COOL_APP_INTERVAL 10m] (default 1m0s)
+}
+
+func ExampleDisable() {
+	// Reset CommandLine flags for example, you don't need this in your code!
+	pflag.CommandLine = pflag.NewFlagSet("test", pflag.PanicOnError)
+
+	// Define a few flags
+	pflag.String("url", "http://localhost:8080", "set the url")
+	pflag.Bool("once", false, "only run processing once")
+
+	// Don't allow FOO_ONCE to set the --once flag.
+	envy.Disable("once")
+
+	// Pre-parse with envy with a prefix of FOO_
+	envy.Parse("FOO")
+
+	// Parse the flags
+	pflag.Parse()
+
+	// Output results to stdout instead of the default stderr
+	pflag.CommandLine.SetOutput(os.Stdout)
+	pflag.PrintDefaults()
+	// Output: --once         only run processing once
+	//       --url string   set the url [FOO_URL] (default "http://localhost:8080")
+}
+
+func ExampleSetEnvName() {
+	// Reset CommandLine flags for example, you don't need this in your code!
+	pflag.CommandLine = pflag.NewFlagSet("test", pflag.PanicOnError)
+
+	// Define a few flags
+	pflag.String("url", "http://localhost:8080", "set the url")
+	pflag.Bool("once", false, "only run processing once")
+
+	// Don't use FOO_URL, instead use MY_HTTP_URL as the env var
+	envy.SetEnvName("url", "MY_HTTP_URL")
+
+	// Pre-parse with envy with a prefix of FOO_
+	envy.Parse("FOO")
+
+	pflag.Parse()
+
+	// Output results to stdout instead of the default stderr
+	pflag.CommandLine.SetOutput(os.Stdout)
+	pflag.PrintDefaults()
+	// Output: --once         only run processing once [FOO_ONCE]
+	//       --url string   set the url [MY_HTTP_URL] (default "http://localhost:8080")
 }
