@@ -13,7 +13,7 @@ go install github.com/fernferret/envy
 There are a lot of solutions for loaing environment variables, but I find a lot
 of them very heavy/confusing. All I wanted was:
 
-* Something to crawl the flags I'd defined and read from a `PFX_` + `flag` 
+* Something to crawl the flags I'd defined and read from a `PFX_` + `flag`
 * A way to define exclusions for desstructive flags that **must** be set
   explicitly
 * A way to define exclusions for "well known" variables like `$KUBECONFIG`
