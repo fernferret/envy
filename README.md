@@ -24,11 +24,15 @@ https://github.com/jamiealquiza/envy, however this version requires using cobra
 which I find a bit overkill for some of my small apps. It also didn't support
 some of the extended features like `Disable` and `SetEnvName`.
 
-The order of parsing is kept a bit simpler than items like viper using:
+The order of values is kept very simple:
 
 1. Flag value
 2. Environment value
-3. Default value
+3. Default flag value
+
+This means the flag value, like `--foo=x`, will always take priority. If it's
+not set, then the environment variable will be checked, and if that's not set
+envy will use the default flag value.
 
 ## Usage
 
