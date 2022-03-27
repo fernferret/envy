@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -21,21 +22,26 @@ const (
 var (
 	ErrFlagNotExists        = errors.New("flag does not exist")
 	ErrCustomAlreadyDefined = errors.New("custom flag already exists")
+	ErrInvalidBoolFlagValue = errors.New("bool flag got value that was't 'true' or 'false'")
 )
 
-// Parse will loop through your defined flags and automatically add a parser for
-// the flag name as an environment variable. This Parse func must be called
-// before the call to pflag.Parse() and after you've defined all your flags.
+// Parse will call the ParseFlagSet on the default pflag.CommandLine. This is
+// likely the function you want to use, but for more details on usage see
+// ParseFlagSet.
 func Parse(pfx string) {
 	ParseFlagSet(pfx, pflag.CommandLine)
 }
 
-// ParseFlagSet is usually called internally, but can be used for custom
-// FlagSets and tests. It performs the bulk of the work for Parse().
+// ParseFlagSet will loop through defined flags and automatically add an environment
+// variable parser for the flag name. This Parse func must be called before the
+// call to pflag.Parse() and after you've defined all your flags.
 func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
+
 	// Transform the pfx to uppercase and remove trailing _s, this allows many
 	// different uses without producing weird results
-	pfx = strings.TrimSuffix(strings.ToUpper(pfx), "_")
+	if pfx != "" {
+		pfx = strings.TrimSuffix(strings.ToUpper(pfx), "_") + "_"
+	}
 
 	fs.VisitAll(func(f *pflag.Flag) {
 
@@ -51,12 +57,22 @@ func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
 			// this is always safe to pull the first item.
 			envName = val[0]
 		} else {
-			envName = fmt.Sprintf("%s_%s", pfx, strings.ReplaceAll(strings.ToUpper(f.Name), "-", "_"))
+			envName = fmt.Sprintf("%s%s", pfx, strings.ReplaceAll(strings.ToUpper(f.Name), "-", "_"))
 		}
 
 		envUsage := envName
 		if val, ok := os.LookupEnv(envName); ok {
 			envUsage = fmt.Sprintf("%s %s", envName, val)
+
+			// Bool flags are a bit more interesting. I don't want to silently
+			// fail if someone passes "yes", so let's panic to blow this thing
+			// wide open!
+			switch f.Value.Type() {
+			case "bool":
+				if _, err := strconv.ParseBool(val); err != nil {
+					panic(ErrInvalidBoolFlagValue)
+				}
+			}
 
 			// We can always set this value since the parse function will always
 			// win and override us.
