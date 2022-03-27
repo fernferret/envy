@@ -102,6 +102,22 @@ func TestParseFlagSet(t *testing.T) {
 			},
 		},
 		{
+			name: "test duration env with default",
+			args: args{
+				name:  "interval",
+				value: time.Minute,
+				usage: "set the interval",
+				env: map[string]string{
+					"FOO_INTERVAL": "15m",
+				},
+				pfx: "FOO",
+				exp: exp{
+					usage: "set the interval [FOO_INTERVAL 15m0s]",
+					value: "15m0s",
+				},
+			},
+		},
+		{
 			name: "test invalid bool env",
 			args: args{
 				name:  "verbose",
@@ -110,8 +126,21 @@ func TestParseFlagSet(t *testing.T) {
 				env: map[string]string{
 					"FOO_VERBOSE": "yay",
 				},
-				panic: true,
 				pfx:   "FOO",
+				panic: true,
+			},
+		},
+		{
+			name: "test invalid duration env",
+			args: args{
+				name:  "interval",
+				value: time.Minute,
+				usage: "set the interval",
+				env: map[string]string{
+					"FOO_INTERVAL": "forever",
+				},
+				pfx:   "FOO",
+				panic: true,
 			},
 		},
 		{
@@ -176,8 +205,10 @@ func TestParseFlagSet(t *testing.T) {
 				pflag.String(tt.args.name, v, tt.args.usage)
 			case bool:
 				pflag.Bool(tt.args.name, v, tt.args.usage)
+			case time.Duration:
+				pflag.Duration(tt.args.name, v, tt.args.usage)
 			default:
-				assert.FailNow(t, "invalid type specified: %T", v)
+				assert.FailNow(t, "invalid type", "unsupported type in tests: %T", v)
 			}
 
 			if tt.args.disabled {
@@ -256,7 +287,7 @@ func ExampleParse() {
 	pflag.PrintDefaults()
 	// Output: --url string          set the url [COOL_APP_URL] (default "http://localhost:8080")
 	//       --once                only run processing once [COOL_APP_ONCE]
-	//   -i, --interval duration   interval to check widgets [COOL_APP_INTERVAL 10m] (default 1m0s)
+	//   -i, --interval duration   interval to check widgets [COOL_APP_INTERVAL 10m0s] (default 1m0s)
 }
 
 func ExampleDisable() {

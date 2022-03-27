@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -20,9 +21,10 @@ const (
 )
 
 var (
-	ErrFlagNotExists        = errors.New("flag does not exist")
-	ErrCustomAlreadyDefined = errors.New("custom flag already exists")
-	ErrInvalidBoolFlagValue = errors.New("bool flag got value that was't 'true' or 'false'")
+	ErrFlagNotExists            = errors.New("flag does not exist")
+	ErrCustomAlreadyDefined     = errors.New("custom flag already exists")
+	ErrInvalidBoolFlagValue     = errors.New("bool flag got value that was't 'true' or 'false'")
+	ErrInvalidDurationFlagValue = errors.New("duration flag got value that was't parsable as a golang duration, example: 1m30s")
 )
 
 // ParseFlagSet will loop through defined flags in the default pflag.CommandLine
@@ -64,7 +66,6 @@ func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
 
 		envUsage := envName
 		if val, ok := os.LookupEnv(envName); ok {
-			envUsage = fmt.Sprintf("%s %s", envName, val)
 
 			// Bool flags are a bit more interesting. I don't want to silently
 			// fail if someone passes "yes", so let's panic to blow this thing
@@ -74,7 +75,17 @@ func ParseFlagSet(pfx string, fs *pflag.FlagSet) {
 				if _, err := strconv.ParseBool(val); err != nil {
 					panic(ErrInvalidBoolFlagValue)
 				}
+			case "duration":
+				if dur, err := time.ParseDuration(val); err != nil {
+					panic(ErrInvalidDurationFlagValue)
+				} else {
+					// Set the val as the parsed duration, this way it shows up
+					// properly parsed.
+					val = dur.String()
+				}
 			}
+
+			envUsage = fmt.Sprintf("%s %s", envName, val)
 
 			// We can always set this value since the parse function will always
 			// win and override us.
